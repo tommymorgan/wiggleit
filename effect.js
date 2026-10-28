@@ -91,6 +91,11 @@ export default class Effect extends St.Icon {
     destroy() {
         if (this._unmagnifyDelayId) {
             GLib.Source.remove(this._unmagnifyDelayId);
+            this._unmagnifyDelayId = null;
         }
+        if (this.isWiggling && this.isHidden) {
+            this.cursor.show();
+        }
+        super.destroy();
     }
 }

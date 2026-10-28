@@ -4,7 +4,11 @@ import Clutter from 'gi://Clutter';
 
 export default class Cursor {
     constructor() {
-        this._tracker = global.backend.get_cursor_tracker(global.display);
+        if (global.backend.get_cursor_tracker.length === 0) {
+            this._tracker = global.backend.get_cursor_tracker();
+        } else {
+            this._tracker = global.backend.get_cursor_tracker(global.display);
+        }
     }
 
     get hot() {
@@ -23,7 +27,11 @@ export default class Cursor {
         }
 
         this._tracker.disconnectObject(this);
-        this._tracker.set_pointer_visible(true);
+        if (this._tracker.uninhibit_cursor_visibility) {
+            this._tracker.uninhibit_cursor_visibility();
+        } else {
+            this._tracker.set_pointer_visible(true);
+        }
     }
 
     hide() {
@@ -31,6 +39,11 @@ export default class Cursor {
 
         if (!seat.is_unfocus_inhibited()) {
             seat.inhibit_unfocus();
+        }
+
+        if (this._tracker.inhibit_cursor_visibility) {
+            this._tracker.inhibit_cursor_visibility();
+            return;
         }
 
         this._tracker.set_pointer_visible(false);
