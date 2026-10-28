@@ -13,8 +13,16 @@ Wiggle settings.
 
 ## Install from source
 
-Run `gnome-extensions pack --force --out-dir /tmp` in this directory, then
-`gnome-extensions install --force /tmp/wiggle@mechtifs.shell-extension.zip`.
+Run the following command in this directory:
+
+```sh
+gnome-extensions pack --force --out-dir /tmp \
+  --extra-source=const.js --extra-source=cursor.js \
+  --extra-source=effect.js --extra-source=history.js \
+  --extra-source=icons --extra-source=LICENSE.txt .
+gnome-extensions install --force /tmp/wiggle@mechtifs.shell-extension.zip
+```
+
 Log out and back in if Shell has already loaded the previous version, then run
 `gnome-extensions enable wiggle@mechtifs`.
 

@@ -63,6 +63,11 @@ export default class WiggleExtension extends Extension {
         }
         this._drawIntervalWatch = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
             const [x, y] = global.get_pointer();
+            if (x === this._lastX && y === this._lastY) {
+                return GLib.SOURCE_CONTINUE;
+            }
+            this._lastX = x;
+            this._lastY = y;
             this._history.push(x, y);
             if (this._effect.isWiggling) {
                 this._effect.move(x, y);
@@ -89,6 +94,8 @@ export default class WiggleExtension extends Extension {
     }
 
     enable() {
+        this._lastX = null;
+        this._lastY = null;
         this._history = new History();
         this._effect = new Effect();
         this._settings = this.getSettings();
