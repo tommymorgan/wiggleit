@@ -8,45 +8,41 @@ import { ExtensionPreferences, gettext } from 'resource:///org/gnome/Shell/Exten
 
 import { Field } from './const.js';
 
-const _ = (text) => (text === null ? null : gettext(text));
-
-const nEntry = (title) => new Adw.EntryRow({
-    title: _(title),
+const nEntry = (title: string) => new Adw.EntryRow({
+    title: gettext(title),
 });
 
-const nSpin = (title, subtitle, lower, upper, step_increment) => new Adw.SpinRow({
-    title: _(title),
-    subtitle: _(subtitle),
+const nSpin = (title: string, subtitle: string, lower: number, upper: number, step_increment: number) => new Adw.SpinRow({
+    title: gettext(title),
+    subtitle: gettext(subtitle),
     numeric: true,
     adjustment: new Gtk.Adjustment({ lower, upper, step_increment }),
 });
 
-const nSwitch = (title, subtitle) => new Adw.SwitchRow({
-    title: _(title),
-    subtitle: _(subtitle),
+const nSwitch = (title: string, subtitle: string) => new Adw.SwitchRow({
+    title: gettext(title),
+    subtitle: gettext(subtitle),
 });
 
 class PrefGroup extends Adw.PreferencesGroup {
+    private readonly _rows: [string, Adw.EntryRow | Adw.SpinRow | Adw.SwitchRow][];
+
     static {
         GObject.registerClass(this);
     }
 
-    constructor(title, description, rows) {
+    constructor(title: string, description: string, rows: [string, Adw.EntryRow | Adw.SpinRow | Adw.SwitchRow][]) {
         super({
-            title: _(title),
-            description: _(description),
+            title: gettext(title),
+            description: gettext(description),
         });
         this._rows = rows;
     }
 
-    bind(settings) {
+    bind(settings: Gio.Settings) {
         this._rows.forEach(([key, obj]) => {
-            let prop = {
-                Adw_ComboRow: 'selected',
-                Adw_EntryRow: 'text',
-                Adw_SpinRow: 'value',
-                Adw_SwitchRow: 'active',
-            }[obj.constructor.name];
+            const prop = obj instanceof Adw.EntryRow ? 'text'
+                : obj instanceof Adw.SpinRow ? 'value' : 'active';
             this.add(obj);
             settings.bind(key, obj, prop, Gio.SettingsBindFlags.DEFAULT);
         });
@@ -54,19 +50,21 @@ class PrefGroup extends Adw.PreferencesGroup {
 }
 
 class PrefPage extends Adw.PreferencesPage {
+    private readonly _groups: PrefGroup[];
+
     static {
         GObject.registerClass(this);
     }
 
-    constructor(title, icon_name, groups) {
+    constructor(title: string, icon_name: string, groups: PrefGroup[]) {
         super({
-            title: _(title),
+            title: gettext(title),
             icon_name,
         });
         this._groups = groups;
     }
 
-    bind(settings) {
+    bind(settings: Gio.Settings) {
         this._groups.forEach((group) => {
             group.bind(settings);
             this.add(group);
@@ -75,8 +73,8 @@ class PrefPage extends Adw.PreferencesPage {
 }
 
 export default class WigglePreferences extends ExtensionPreferences {
-    fillPreferencesWindow(window) {
-        window.set_title(gettext('Wiggle'));
+    override async fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
+        window.set_title(gettext('Wiggleit'));
         const _settings = this.getSettings();
 
         const _appearancePage = new PrefPage('Appearance', 'org.gnome.Settings-appearance', [

@@ -2,9 +2,11 @@
 
 import GLib from 'gi://GLib';
 
-const calcDistance = (p1, p2) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+type Point = { x: number; y: number };
 
-const calcGamma = (st, nd, rd) => {
+const calcDistance = (p1: Point, p2: Point) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+
+const calcGamma = (st: Point, nd: Point, rd: Point) => {
     var a = Math.sqrt(Math.pow(st.x - nd.x, 2) + Math.pow(st.y - nd.y, 2));
     var b = Math.sqrt(Math.pow(nd.x - rd.x, 2) + Math.pow(nd.y - rd.y, 2));
     var c = Math.sqrt(Math.pow(rd.x - st.x, 2) + Math.pow(rd.y - st.y, 2));
@@ -16,12 +18,10 @@ const calcGamma = (st, nd, rd) => {
 };
 
 export default class History {
-    constructor() {
-        this._samples = [];
-        this.sampleSize = 25;
-        this.radiansThreshold = 15;
-        this.distanceThreshold = 180;
-    }
+    private _samples: (Point & { t: number })[] = [];
+    sampleSize = 25;
+    radiansThreshold = 15;
+    distanceThreshold = 180;
 
     get lastCoords() {
         return this._samples[this._samples.length - 1];
@@ -34,8 +34,9 @@ export default class History {
     check() {
         let now = GLib.get_monotonic_time();
 
-        for (let i = 0; i < this._samples.length; i++) {
-            if (now - this._samples[i].t > this.sampleSize * 1000) {
+        for (let i = this._samples.length - 1; i >= 0; i--) {
+            const sample = this._samples[i];
+            if (sample && now - sample.t > this.sampleSize * 1000) {
                 this._samples.splice(i, 1);
             }
         }
@@ -43,13 +44,18 @@ export default class History {
         let radians = 0;
         let distance = 0;
         for (let i = 2; i < this._samples.length; i++) {
-            radians += calcGamma(this._samples[i - 2], this._samples[i - 1], this._samples[i]);
-            distance = Math.max(distance, calcDistance(this._samples[i - 1], this._samples[i]));
+            const first = this._samples[i - 2];
+            const second = this._samples[i - 1];
+            const third = this._samples[i];
+            if (first && second && third) {
+                radians += calcGamma(first, second, third);
+                distance = Math.max(distance, calcDistance(second, third));
+            }
         }
         return radians > this.radiansThreshold && distance > this.distanceThreshold;
     }
 
-    push(x, y) {
+    push(x: number, y: number) {
         this._samples.push({ x: x, y: y, t: GLib.get_monotonic_time() });
     }
 }

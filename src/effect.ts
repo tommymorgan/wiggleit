@@ -10,19 +10,34 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import Cursor from './cursor.js';
 
+// Shell normalizes snake_case keys to GObject property names for transitions.
+type CursorAnimation = Parameters<St.Icon['ease']>[0] & {
+    scale_x: number;
+    scale_y: number;
+    pivot_point: Graphene.Point;
+};
+
 export default class Effect extends St.Icon {
+    isHidden = true;
+    magnifyDuration = 250;
+    unmagnifyDuration = 150;
+    unmagnifyDelay = 0;
+    isWiggling = false;
+    readonly cursor = new Cursor();
+    private readonly _hotX: number;
+    private readonly _hotY: number;
+    private readonly _spriteSize: number;
+    private readonly _pivot: Graphene.Point;
+    private _ratio = 1;
+    private _isInTransition = false;
+    private _unmagnifyDelayId = 0;
+
     static {
         GObject.registerClass(this);
     }
 
     constructor() {
         super();
-        this.isHidden = true;
-        this.magnifyDuration = 250;
-        this.unmagnifyDuration = 150;
-        this.unmagnifyDelay = 0;
-        this.isWiggling = false;
-        this.cursor = new Cursor();
         [this._hotX, this._hotY] = this.cursor.hot;
         this._spriteSize = this.cursor.sprite ? this.cursor.sprite.get_width() : 24;
 
@@ -32,16 +47,16 @@ export default class Effect extends St.Icon {
         });
     }
 
-    set cursorSize(size) {
+    set cursorSize(size: number) {
         this.icon_size = size;
         this._ratio = size / this._spriteSize;
     }
 
-    set cursorPath(path) {
+    set cursorPath(path: string) {
         this.gicon = Gio.Icon.new_for_string(path || GLib.path_get_dirname(import.meta.url.slice(7)) + '/icons/cursor.svg');
     }
 
-    move(x, y) {
+    move(x: number, y: number) {
         this.set_position(x - this._hotX * this._ratio, y - this._hotY * this._ratio);
     }
 
@@ -52,13 +67,14 @@ export default class Effect extends St.Icon {
             this.cursor.hide();
         }
         this.remove_all_transitions();
-        this.ease({
+        const animation: CursorAnimation = {
             duration: this.magnifyDuration,
-            transition: Clutter.AnimationMode.EASE_IN_QUAD,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
             scale_x: 1.0,
             scale_y: 1.0,
             pivot_point: this._pivot,
-        });
+        };
+        this.ease(animation);
     }
 
     unmagnify() {
@@ -68,7 +84,7 @@ export default class Effect extends St.Icon {
         this._isInTransition = true;
         this._unmagnifyDelayId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.unmagnifyDelay, () => {
             this.remove_all_transitions();
-            this.ease({
+            const animation: CursorAnimation = {
                 duration: this.unmagnifyDuration,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 scale_x: 1.0 / this._ratio,
@@ -82,16 +98,17 @@ export default class Effect extends St.Icon {
                     this.isWiggling = false;
                     this._isInTransition = false;
                 },
-            });
-            this._unmagnifyDelayId = null;
+            };
+            this.ease(animation);
+            this._unmagnifyDelayId = 0;
             return GLib.SOURCE_REMOVE;
         });
     }
 
-    destroy() {
+    override destroy() {
         if (this._unmagnifyDelayId) {
             GLib.Source.remove(this._unmagnifyDelayId);
-            this._unmagnifyDelayId = null;
+            this._unmagnifyDelayId = 0;
         }
         if (this.isWiggling && this.isHidden) {
             this.cursor.show();
