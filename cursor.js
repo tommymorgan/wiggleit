@@ -1,14 +1,11 @@
 'use strict';
 
-import Clutter from 'gi://Clutter';
-
 export default class Cursor {
     constructor() {
-        if (global.backend.get_cursor_tracker.length === 0) {
-            this._tracker = global.backend.get_cursor_tracker();
-        } else {
-            this._tracker = global.backend.get_cursor_tracker(global.display);
-        }
+        this._tracker = global.backend.get_cursor_tracker();
+        this._seat = global.stage.get_context().get_backend().get_default_seat();
+        this._hidden = false;
+        this._inhibitedUnfocus = false;
     }
 
     get hot() {
@@ -20,41 +17,26 @@ export default class Cursor {
     }
 
     show() {
-        const seat = Clutter.get_default_backend().get_default_seat();
-
-        if (seat.is_unfocus_inhibited()) {
-            seat.uninhibit_unfocus();
+        if (!this._hidden) {
+            return;
         }
-
-        this._tracker.disconnectObject(this);
-        if (this._tracker.uninhibit_cursor_visibility) {
-            this._tracker.uninhibit_cursor_visibility();
-        } else {
-            this._tracker.set_pointer_visible(true);
+        this._tracker.uninhibit_cursor_visibility();
+        if (this._inhibitedUnfocus) {
+            this._seat.uninhibit_unfocus();
+            this._inhibitedUnfocus = false;
         }
+        this._hidden = false;
     }
 
     hide() {
-        const seat = Clutter.get_default_backend().get_default_seat();
-
-        if (!seat.is_unfocus_inhibited()) {
-            seat.inhibit_unfocus();
-        }
-
-        if (this._tracker.inhibit_cursor_visibility) {
-            this._tracker.inhibit_cursor_visibility();
+        if (this._hidden) {
             return;
         }
-
-        this._tracker.set_pointer_visible(false);
-        this._tracker.disconnectObject(this);
-        this._tracker.connectObject(
-            'visibility-changed', () => {
-                if (this._tracker.get_pointer_visible()) {
-                    this._tracker.set_pointer_visible(false);
-                }
-            },
-            this
-        );
+        if (!this._seat.is_unfocus_inhibited()) {
+            this._seat.inhibit_unfocus();
+            this._inhibitedUnfocus = true;
+        }
+        this._tracker.inhibit_cursor_visibility();
+        this._hidden = true;
     }
 }

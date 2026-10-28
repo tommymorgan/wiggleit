@@ -1,12 +1,36 @@
-# Wiggle
+# Wiggleit
 
-Wiggle is a GNOME 45+ port/fix for the scaling effect from [Jiggle](https://github.com/jeffchannell/jiggle) with better performance. Wiggle magnifies your cursor when the mouse is moved rapidly.
+Wiggleit magnifies the cursor when the mouse moves rapidly. This is a maintained
+source fork of [mechtifs/wiggle](https://github.com/mechtifs/wiggle), itself a
+GNOME Shell port of [Jiggle](https://github.com/jeffchannell/jiggle).
 
-## Installation
+## Compatibility
 
-### E.G.O
+The maintained version targets GNOME Shell 51. It replaces the removed Shell
+pointer watcher with a GLib sampling timer and uses the current cursor and seat
+APIs. The extension UUID and settings schema remain unchanged to preserve existing
+Wiggle settings.
 
-[<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="middle">][EGO]
+## Install from source
+
+Run `gnome-extensions pack --force --out-dir /tmp` in this directory, then
+`gnome-extensions install --force /tmp/wiggle@mechtifs.shell-extension.zip`.
+Log out and back in if Shell has already loaded the previous version, then run
+`gnome-extensions enable wiggle@mechtifs`.
+
+This replaces the installed Wiggle extension. Updates from extensions.gnome.org
+may overwrite this fork; this repository is the source of truth for Wiggleit.
+
+## Recovered changes
+
+Commit `1bb296a2` preserves the installed JavaScript and metadata recovered on
+October 27, 2026, before the GNOME 51 repair. These include cursor API compatibility
+and effect-destruction fixes. Their original author and original commits are unknown.
+Generated `gschemas.compiled` is rebuilt rather than stored.
+
+The original GPL license and complete upstream history are retained. This
+repository is separate from the archived `tommymorgan/jiggle` repository, not a
+GitHub-network fork: GitHub resolved the initial fork request to that older fork.
 
 ## Screenshots
 
@@ -14,4 +38,3 @@ Wiggle is a GNOME 45+ port/fix for the scaling effect from [Jiggle](https://gith
 ![Preference_Appearance](https://github.com/mechtifs/wiggle/assets/18751876/eca5dc1b-59a6-4f42-88ad-e4edc42acc81)
 ![Preference_Behavior](https://github.com/mechtifs/wiggle/assets/18751876/11193ab4-5145-4632-aff2-9de09eda44be)
 
-[EGO]:https://extensions.gnome.org/extension/6784/wiggle/

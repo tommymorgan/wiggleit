@@ -2,7 +2,6 @@
 
 import GLib from 'gi://GLib';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
-import { getPointerWatcher } from 'resource:///org/gnome/shell/ui/pointerWatcher.js';
 
 import { Field } from './const.js';
 import Effect from './effect.js';
@@ -60,13 +59,15 @@ export default class WiggleExtension extends Extension {
     _onDrawIntervalChange(interval) {
         this._drawInterval = interval;
         if (this._drawIntervalWatch) {
-            this._pointerWatcher._removeWatch(this._drawIntervalWatch);
+            GLib.Source.remove(this._drawIntervalWatch);
         }
-        this._drawIntervalWatch = this._pointerWatcher.addWatch(interval, (x, y) => {
+        this._drawIntervalWatch = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
+            const [x, y] = global.get_pointer();
             this._history.push(x, y);
             if (this._effect.isWiggling) {
                 this._effect.move(x, y);
             }
+            return GLib.SOURCE_CONTINUE;
         });
     }
 
@@ -80,7 +81,7 @@ export default class WiggleExtension extends Extension {
                 this._effect.unmagnify();
             }
             if (this._drawIntervalWatch) {
-                this._pointerWatcher._removeWatch(this._drawIntervalWatch);
+                GLib.Source.remove(this._drawIntervalWatch);
                 this._drawIntervalWatch = null;
                 this._history.clear();
             }
@@ -88,7 +89,6 @@ export default class WiggleExtension extends Extension {
     }
 
     enable() {
-        this._pointerWatcher = getPointerWatcher();
         this._history = new History();
         this._effect = new Effect();
         this._settings = this.getSettings();
@@ -111,12 +111,13 @@ export default class WiggleExtension extends Extension {
     disable() {
         if (this._checkTimeoutId) {
             GLib.Source.remove(this._checkTimeoutId);
+            this._checkTimeoutId = null;
         }
         this._togglePointerWatcher(false);
         this._effect.destroy();
         this._effect = null;
-        this._pointerWatcher = null;
         this._history = null;
+        this._isHiddenByProgram = false;
         this._settings = null;
     }
 }
