@@ -7,6 +7,7 @@ import Gtk from 'gi://Gtk';
 import { ExtensionPreferences, gettext } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import { Field } from './const.js';
+import {migrateSettings} from './settings.js';
 
 const nEntry = (title: string) => new Adw.EntryRow({
     title: gettext(title),
@@ -72,10 +73,11 @@ class PrefPage extends Adw.PreferencesPage {
     }
 }
 
-export default class WigglePreferences extends ExtensionPreferences {
+export default class WiggleitPreferences extends ExtensionPreferences {
     override async fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
         window.set_title(gettext('Wiggleit'));
         const _settings = this.getSettings();
+        migrateSettings(_settings, this.path);
 
         const _appearancePage = new PrefPage('Appearance', 'org.gnome.Settings-appearance', [
             new PrefGroup('Cursor Icon', 'Configure the appearance of the cursor icon.', [

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="gnome-shell-extension-wiggle">
-  <schema id="org.gnome.shell.extensions.wiggle" path="/org/gnome/shell/extensions/wiggle/">
+<schemalist gettext-domain="gnome-shell-extension-wiggleit">
+  <schema id="org.gnome.shell.extensions.wiggleit" path="/org/gnome/shell/extensions/wiggleit/">
     <key name="hide-cursor" type="b">
       <default>true</default>
     </key>
@@ -33,6 +33,10 @@
     </key>
     <key name="draw-interval" type="i">
       <default>8</default>
+    </key>
+    <key name="wiggle-settings-imported" type="b">
+      <default>false</default>
+      <summary>Whether the first-use import of saved Wiggle settings is complete</summary>
     </key>
   </schema>
 </schemalist>

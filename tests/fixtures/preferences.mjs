@@ -27,7 +27,7 @@ try {
     const {extensionManager} = await import('resource:///org/gnome/Shell/Extensions/js/extensionsService.js');
     const {ExtensionPrefsDialog} = await import('resource:///org/gnome/Shell/Extensions/js/extensionPrefsDialog.js');
     const info = Gio.DBus.session.call_sync('org.gnome.Shell', '/org/gnome/Shell',
-        'org.gnome.Shell.Extensions', 'GetExtensionInfo', new GLib.Variant('(s)', ['wiggle@mechtifs']),
+        'org.gnome.Shell.Extensions', 'GetExtensionInfo', new GLib.Variant('(s)', ['wiggleit@tommymorgan']),
         null, Gio.DBusCallFlags.NONE, 5000, null);
     const [serialized] = info.deep_unpack();
     const extension = extensionManager.createExtensionObject(serialized);
@@ -63,6 +63,9 @@ try {
                 const settings = extension.stateObj.getSettings();
                 const hidden = settings.get_boolean('hide-cursor');
                 const size = settings.get_int('cursor-size');
+                assert(size === 132 && hidden === false,
+                    'Preferences did not preserve the migrated profile and subsequent Shell settings');
+                assert(settings.get_boolean('wiggle-settings-imported'), 'Preferences lost the completed migration marker');
                 assert(toggles[0].active === hidden, 'Hide cursor control did not load the saved setting');
                 assert(sizes[0].value === size, 'Cursor size control did not load the saved setting');
                 toggles[0].active = !hidden;

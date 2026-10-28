@@ -8,7 +8,7 @@ import test from 'node:test';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
-const uuid = 'wiggle@mechtifs';
+const uuid = 'wiggleit@tommymorgan';
 const expectedChecks = [
     'virtual-pointer gesture attaches magnifier',
     'cursor ownership is balanced',
@@ -51,8 +51,8 @@ async function run(command, args, env, timeout) {
 }
 
 async function prerequisites() {
-    const shellLib = '/usr/lib/gnome-shell';
-    const directories = [path.join(shellLib, 'girepository-1.0'), shellLib];
+    const libraries = ['/usr/lib64/gnome-shell', '/usr/lib/gnome-shell'];
+    const directories = libraries.flatMap(directory => [path.join(directory, 'girepository-1.0'), directory]);
     let hasShew = false;
     for (const directory of directories) {
         try {
@@ -61,17 +61,17 @@ async function prerequisites() {
             if (error.code !== 'ENOENT') throw error;
         }
     }
-    assert.ok(hasShew, 'Environment prerequisite: GNOME Shell client Shew typelib in /usr/lib/gnome-shell/girepository-1.0 or /usr/lib/gnome-shell');
+    assert.ok(hasShew, `Environment prerequisite: GNOME Shell client Shew typelib in ${directories.join(', ')}`);
     for (const resource of ['org.gnome.Shell.Extensions.src.gresource', 'gnome-shell-dbus-interfaces.gresource']) {
         await access(`/usr/share/gnome-shell/${resource}`).catch(error => {
             throw new Error(`Environment prerequisite: GNOME Shell preferences resource ${resource}: ${error.message}`);
         });
     }
-    return directories.join(':');
+    return {typelibPath: directories.join(':'), libraryPath: libraries.join(':')};
 }
 
-test('clean packaged extension recognizes gestures, owns cursor lifecycle, and opens bound GNOME preferences', {timeout: 65000}, async () => {
-    const typelibPath = await prerequisites();
+test('independent packaged extension inherits settings, recognizes gestures, owns cursor lifecycle, and opens bound GNOME preferences', {timeout: 65000}, async () => {
+    const {typelibPath, libraryPath} = await prerequisites();
     const temporary = await mkdtemp(path.join(tmpdir(), 'wiggleit-shell-test-'));
     try {
         const data = path.join(temporary, 'data');
@@ -97,7 +97,7 @@ test('clean packaged extension recognizes gestures, owns cursor lifecycle, and o
             GSK_RENDERER: 'cairo',
             LIBGL_ALWAYS_SOFTWARE: '1',
             GI_TYPELIB_PATH: typelibPath,
-            LD_LIBRARY_PATH: '/usr/lib/gnome-shell',
+            LD_LIBRARY_PATH: libraryPath,
             WAYLAND_DISPLAY: `wiggleit-test-${process.pid}-${path.basename(temporary)}`,
             WIGGLE_TEST_RESULT: path.join(temporary, 'result.json'),
             WIGGLE_PREFS_RESULT: path.join(temporary, 'preferences.json'),
@@ -111,7 +111,7 @@ test('clean packaged extension recognizes gestures, owns cursor lifecycle, and o
         await copyFile(path.join(fixtures, 'shell-probe.mjs'), path.join(probe, 'extension.js'));
         await writeFile(path.join(probe, 'metadata.json'), JSON.stringify({
             uuid: 'shell-test@wiggleit', name: 'Wiggleit isolated integration probe',
-            description: 'Test-only extension in a private headless shell', 'shell-version': ['51'],
+            description: 'Test-only extension in a private headless shell', 'shell-version': ['46', '47', '48', '49', '50', '51'],
         }));
         const execution = await run('dbus-run-session', ['--', process.execPath, path.join(root, 'tests/helpers/shell-session.mjs')], env, 45000);
         const diagnostics = `Private GNOME Shell ${execution.timedOut ? 'timed out' : `exited ${execution.code} (${execution.signal ?? 'no signal'})`}:\n${execution.log}`;

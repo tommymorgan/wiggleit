@@ -1,10 +1,12 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
-const uuid = 'wiggle@mechtifs';
+const uuid = 'wiggleit@tommymorgan';
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
 export default class ShellProbe extends Extension {
@@ -60,6 +62,17 @@ export default class ShellProbe extends Extension {
         const manager = Main.extensionManager;
         await this._until(() => manager.lookup(uuid),
             'Environment/startup failure: packaged extension was not discovered', 10000);
+        const installed = manager.lookup(uuid);
+        assert(installed.metadata['settings-schema'] === 'org.gnome.shell.extensions.wiggleit',
+            'Packaged extension does not use an independent Wiggleit schema');
+        const legacySource = Gio.SettingsSchemaSource.new_from_directory(
+            `${installed.path}/migration-schemas`, Gio.SettingsSchemaSource.get_default(), false);
+        const legacySchema = legacySource.lookup('org.gnome.shell.extensions.wiggle', false);
+        assert(legacySchema, 'Installed private migration schema is unavailable');
+        const legacy = new Gio.Settings({settings_schema: legacySchema});
+        assert(legacy.set_int('cursor-size', 144) && legacy.set_boolean('hide-cursor', false),
+            'Could not seed saved Wiggle settings in the isolated profile');
+        Gio.Settings.sync();
         // Enable the target after this supervisor, avoiding Shell's extension rebase.
         await manager.enableExtension(uuid);
         await this._until(() => manager.lookup(uuid)?.stateObj?._effect,
@@ -71,8 +84,26 @@ export default class ShellProbe extends Extension {
         const extension = manager.lookup(uuid);
         const state = extension.stateObj;
         const settings = state.getSettings();
-        const seat = global.stage.get_context().get_backend().get_default_seat();
-        const tracker = global.backend.get_cursor_tracker();
+        assert(settings.get_int('cursor-size') === 144 && !settings.get_boolean('hide-cursor'),
+            'Enabling the independent extension did not inherit saved Wiggle settings');
+        assert(settings.get_boolean('wiggle-settings-imported'), 'Enable did not complete settings migration');
+        assert(state._effect.icon_size === 144 && !state._effect.isHidden,
+            'The enabled magnifier did not apply inherited settings');
+        const assertLegacyUnchanged = () => {
+            assert(legacy.get_int('cursor-size') === 144 && !legacy.get_boolean('hide-cursor'),
+                'Wiggleit changed the original Wiggle settings');
+        };
+        assertLegacyUnchanged();
+        // Select the native API independently of Wiggleit's production adapter.
+        const shellVersion = Number.parseInt(Config.PACKAGE_VERSION, 10);
+        assert(shellVersion >= 46 && shellVersion <= 51, `Unsupported test Shell version: ${Config.PACKAGE_VERSION}`);
+        const backend = shellVersion >= 51
+            ? global.stage.get_context().get_backend()
+            : Clutter.get_default_backend();
+        const seat = backend.get_default_seat();
+        const tracker = shellVersion <= 47
+            ? Meta.CursorTracker.get_for_display(global.display)
+            : global.backend.get_cursor_tracker();
         // This characterized stimulus tests change-only sampling; it makes no claim
         // about the sensitivity of the shipped defaults.
         for (const [key, value] of Object.entries({
@@ -116,7 +147,11 @@ export default class ShellProbe extends Extension {
         this._checks.push('cursor ownership is balanced');
 
         seat.inhibit_unfocus();
-        tracker.inhibit_cursor_visibility();
+        // Legacy visibility is a boolean: only an external hide preceding our
+        // acquisition is observable; a second hide while hidden has no identity.
+        // Modern Mutter instead provides independently counted hide ownership.
+        if (shellVersion >= 49) tracker.inhibit_cursor_visibility();
+        else tracker.set_pointer_visible(false);
         try {
             cursor.hide();
             cursor.hide();
@@ -125,7 +160,8 @@ export default class ShellProbe extends Extension {
             assert(seat.is_unfocus_inhibited(), 'Cursor show removed an external seat inhibition');
             assert(!tracker.get_pointer_visible(), 'Cursor show removed an external visibility inhibition');
         } finally {
-            tracker.uninhibit_cursor_visibility();
+            if (shellVersion >= 49) tracker.uninhibit_cursor_visibility();
+            else tracker.set_pointer_visible(visibleBefore);
             seat.uninhibit_unfocus();
         }
         assert(tracker.get_pointer_visible() === visibleBefore, 'External visibility inhibition was leaked');
@@ -205,5 +241,6 @@ export default class ShellProbe extends Extension {
         assert(process.get_successful() && preferences.ok,
             `Preferences assertions failed: ${JSON.stringify(preferences)}\n${stdout}\n${stderr}`);
         this._checks.push(...preferences.checks);
+        assertLegacyUnchanged();
     }
 }

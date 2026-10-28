@@ -8,7 +8,7 @@ import Graphene from 'gi://Graphene';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import Cursor from './cursor.js';
+import type {Cursor} from './compat/cursor.js';
 
 // Shell normalizes snake_case keys to GObject property names for transitions.
 type CursorAnimation = Parameters<St.Icon['ease']>[0] & {
@@ -23,7 +23,7 @@ export default class Effect extends St.Icon {
     unmagnifyDuration = 150;
     unmagnifyDelay = 0;
     isWiggling = false;
-    readonly cursor = new Cursor();
+    readonly cursor: Cursor;
     private readonly _hotX: number;
     private readonly _hotY: number;
     private readonly _spriteSize: number;
@@ -36,8 +36,9 @@ export default class Effect extends St.Icon {
         GObject.registerClass(this);
     }
 
-    constructor() {
+    constructor(cursor: Cursor) {
         super();
+        this.cursor = cursor;
         [this._hotX, this._hotY] = this.cursor.hot;
         this._spriteSize = this.cursor.sprite ? this.cursor.sprite.get_width() : 24;
 

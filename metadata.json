@@ -1,12 +1,17 @@
 {
-  "description": "Wiggle is a GNOME Shell extension that magnifies the cursor when the mouse is moved rapidly.",
-  "gettext-domain": "gnome-shell-extension-wiggle",
+  "description": "Wiggleit magnifies the cursor when the mouse is moved rapidly.",
+  "gettext-domain": "gnome-shell-extension-wiggleit",
   "name": "Wiggleit",
-  "settings-schema": "org.gnome.shell.extensions.wiggle",
+  "settings-schema": "org.gnome.shell.extensions.wiggleit",
   "shell-version": [
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
     "51"
   ],
   "url": "https://github.com/tommymorgan/wiggleit",
-  "uuid": "wiggle@mechtifs",
-  "version": 8
+  "uuid": "wiggleit@tommymorgan",
+  "version": 9
 }

@@ -7,6 +7,8 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Field } from './const.js';
 import Effect from './effect.js';
 import History from './history.js';
+import {createCursorForShell} from './compat/index.js';
+import {migrateSettings} from './settings.js';
 
 type SettingBinding =
     | [string, 'b', (value: boolean) => void]
@@ -27,7 +29,7 @@ const initSettings = (settings: Gio.Settings, entries: SettingBinding[]) => {
     });
 };
 
-export default class WiggleExtension extends Extension {
+export default class WiggleitExtension extends Extension {
     private _history: History | null = null;
     private _effect: Effect | null = null;
     private _settings: Gio.Settings | null = null;
@@ -125,9 +127,10 @@ export default class WiggleExtension extends Extension {
     override enable() {
         this._lastX = null;
         this._lastY = null;
-        const history = this._history = new History();
-        const effect = this._effect = new Effect();
         this._settings = this.getSettings();
+        migrateSettings(this._settings, this.path);
+        const history = this._history = new History();
+        const effect = this._effect = new Effect(createCursorForShell());
         this._settingsSignals = initSettings(this._settings, [
             [Field.HIDE, 'b', (r: boolean) => {effect.isHidden = r}],
             [Field.SIZE, 'i', (r: number) => {effect.cursorSize = r}],
